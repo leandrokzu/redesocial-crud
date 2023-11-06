@@ -18,7 +18,7 @@ export class PostController {
         user_id: user.id,
         description,
         images,
-        likes: 0,
+        likes: [],
         comments: [],
       });
 
@@ -43,6 +43,17 @@ export class PostController {
         {
           $addFields: {
             user: { $first: '$user' },
+          },
+        },
+        {
+          $addFields: {
+            likes: {
+              $cond: {
+                if: { $isArray: '$likes' },
+                then: { $size: '$likes' },
+                else: 0,
+              },
+            },
           },
         },
       ]);
@@ -115,15 +126,42 @@ export class PostController {
 
   async likePost(req: Request, res: Response) {
     const { id } = req.params;
+    const { user_id } = req.body;
 
     try {
       const post = await Post.findById(id);
-
       if (!post) {
         return res.status(404).json({ message: 'Post não encontrado' });
       }
 
-      await Post.updateOne({ _id: id }, { $inc: { likes: 1 } });
+      const user = await User.findById(user_id);
+      if (!user) {
+        return res.status(404).json({ message: 'Usuário não encontrado' });
+      }
+
+      const likeExists = post.likes.find((like) => String(like) === user_id);
+
+      if (likeExists) {
+        await Post.updateOne(
+          { _id: id },
+          {
+            $pull: {
+              likes: user._id,
+            },
+          }
+        );
+
+        return res.status(204).json();
+      }
+
+      await Post.updateOne(
+        { _id: id },
+        {
+          $push: {
+            likes: user._id,
+          },
+        }
+      );
 
       return res.status(204).json();
     } catch (err) {

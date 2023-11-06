@@ -4,7 +4,7 @@ const Post = new Schema({
   user_id: Types.ObjectId,
   description: String,
   images: [String],
-  likes: Number,
+  likes: [Types.ObjectId],
   comments: [
     {
       _id: Types.ObjectId,
