@@ -2,10 +2,11 @@
 import User from '../models/User';
 import Post from '../models/Post';
 import { Types } from 'mongoose';
+import { uploadFile } from '../services/upload';
 
 export class PostController {
   async create(req: Request, res: Response) {
-    const { user_id, description, images } = req.body;
+    const { user_id, description } = req.body;
 
     try {
       const user = await User.findById(user_id);
@@ -13,6 +14,20 @@ export class PostController {
       if (!user) {
         return res.status(404).json({ message: 'Usuário não encontrado' });
       }
+
+      const files = req.files as Express.Multer.File[];
+
+      const images = await Promise.all(
+        files.map(async (file) => {
+          const img = await uploadFile(
+            `postagens/${file.originalname}`,
+            file.buffer,
+            file.mimetype
+          );
+
+          return img;
+        })
+      );
 
       const newPost = await Post.create({
         user_id: user.id,
